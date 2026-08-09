@@ -1,10 +1,6 @@
 from agent.pipeline import ResumeScreeningAgent
 
 
-# --------------------------------------------------
-# Job description
-# --------------------------------------------------
-
 job_description = """
 We are looking for a Junior AI Research Associate
 with knowledge of Python, machine learning,
@@ -20,41 +16,45 @@ Computer Science, or a related field is preferred.
 """
 
 
-# --------------------------------------------------
-# Required skills
-# --------------------------------------------------
-
-required_skills = [
-    "Python",
-    "Machine Learning",
-    "NLP",
-    "Deep Learning",
-    "Transformers",
-    "Generative AI"
-]
-
-
-# --------------------------------------------------
-# Create screening agent
-# --------------------------------------------------
-
 agent = ResumeScreeningAgent()
 
 
-# --------------------------------------------------
-# Screen all candidates
-# --------------------------------------------------
-
 results = agent.screen_candidates(
     resume_folder="data/resumes",
-    job_description=job_description,
-    required_skills=required_skills,
-    minimum_months=6
+    job_description=job_description
 )
 
 
 # --------------------------------------------------
-# Display final results
+# Show JD requirements discovered by the agent
+# --------------------------------------------------
+
+requirements = results["requirements"]
+
+print("\n")
+print("=" * 70)
+print("JOB REQUIREMENTS IDENTIFIED BY AGENT")
+print("=" * 70)
+
+print("\nRequired Skills:")
+
+for skill in requirements["required_skills"]:
+    print(f"  • {skill}")
+
+print(
+    "\nMinimum Experience:",
+    requirements["minimum_experience_months"],
+    "months"
+)
+
+print("\nEducation Keywords:")
+
+for keyword in requirements["education_keywords"]:
+    print(f"  • {keyword}")
+
+
+# --------------------------------------------------
+# Show candidate results
 # --------------------------------------------------
 
 print("\n")
@@ -62,7 +62,7 @@ print("=" * 70)
 print("FINAL RESUME SCREENING RESULTS")
 print("=" * 70)
 
-for candidate in results:
+for candidate in results["candidates"]:
 
     print(
         f"\nRank {candidate['rank']}: "

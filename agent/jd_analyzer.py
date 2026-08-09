@@ -10,7 +10,6 @@ KNOWN_SKILLS = [
     "Deep Learning",
     "Artificial Intelligence",
     "NLP",
-    "Natural Language Processing",
     "Computer Vision",
     "Generative AI",
     "LLM",
@@ -32,6 +31,22 @@ KNOWN_SKILLS = [
 ]
 
 
+SKILL_ALIASES = {
+    "natural language processing": "NLP",
+    "nlp": "NLP",
+    "artificial intelligence": "Artificial Intelligence",
+    "ai": "Artificial Intelligence",
+    "machine learning": "Machine Learning",
+    "ml": "Machine Learning",
+    "deep learning": "Deep Learning",
+    "dl": "Deep Learning",
+    "generative ai": "Generative AI",
+    "genai": "Generative AI",
+    "large language models": "LLM",
+    "large language model": "LLM",
+}
+
+
 class JobDescriptionAnalyzer:
     """
     Analyzes a job description and extracts
@@ -40,18 +55,27 @@ class JobDescriptionAnalyzer:
 
     def extract_required_skills(self, job_description):
         """
-        Identify known technical skills mentioned
-        in the job description.
+        Identify technical skills mentioned in the
+        job description and normalize their names.
         """
 
         found_skills = []
 
         text_lower = job_description.lower()
 
+        # Detect skills directly from the known skill list
         for skill in KNOWN_SKILLS:
 
             if skill.lower() in text_lower:
                 found_skills.append(skill)
+
+        # Handle equivalent skill names
+        for alias, standard_skill in SKILL_ALIASES.items():
+
+            if alias in text_lower:
+
+                if standard_skill not in found_skills:
+                    found_skills.append(standard_skill)
 
         return found_skills
 

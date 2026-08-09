@@ -6,27 +6,20 @@ from agent.embeddings import EmbeddingMatcher
 from agent.scorer import CandidateScorer
 from agent.ranker import CandidateRanker
 from agent.reasoning import CandidateReasoner
+from agent.jd_analyzer import JobDescriptionAnalyzer
 
 
 class ResumeScreeningAgent:
     """
     Main orchestration class for the resume screening system.
-
-    It coordinates:
-    1. Resume parsing
-    2. Information extraction
-    3. Semantic matching
-    4. Candidate scoring
-    5. Candidate ranking
-    6. Screening reasoning
     """
 
     def __init__(self):
-
         self.matcher = EmbeddingMatcher()
         self.scorer = CandidateScorer()
         self.ranker = CandidateRanker()
         self.reasoner = CandidateReasoner()
+        self.jd_analyzer = JobDescriptionAnalyzer()
 
     def process_resume(
         self,
@@ -39,24 +32,15 @@ class ResumeScreeningAgent:
         Process one resume from file to final screening result.
         """
 
-        # -----------------------------------------
         # 1. Extract resume text
-        # -----------------------------------------
-
         resume_text = extract_resume_text(resume_path)
 
-        # -----------------------------------------
         # 2. Extract structured information
-        # -----------------------------------------
-
         candidate = extract_resume_information(
             resume_text
         )
 
-        # -----------------------------------------
         # 3. Calculate semantic similarity
-        # -----------------------------------------
-
         similarity = self.matcher.calculate_similarity(
             job_description,
             resume_text
@@ -64,19 +48,13 @@ class ResumeScreeningAgent:
 
         semantic_score = similarity * 100
 
-        # -----------------------------------------
         # 4. Calculate skill score
-        # -----------------------------------------
-
         skill_score = self.scorer.calculate_skill_score(
             candidate["skills"],
             required_skills
         )
 
-        # -----------------------------------------
         # 5. Calculate experience score
-        # -----------------------------------------
-
         experience_score = (
             self.scorer.calculate_experience_score(
                 candidate["experience"],
@@ -84,10 +62,7 @@ class ResumeScreeningAgent:
             )
         )
 
-        # -----------------------------------------
         # 6. Calculate education score
-        # -----------------------------------------
-
         education_score = (
             self.scorer.calculate_education_score(
                 candidate["education"],
@@ -99,10 +74,7 @@ class ResumeScreeningAgent:
             )
         )
 
-        # -----------------------------------------
         # 7. Calculate overall score
-        # -----------------------------------------
-
         overall_score = (
             self.scorer.calculate_overall_score(
                 semantic_score,
@@ -112,10 +84,7 @@ class ResumeScreeningAgent:
             )
         )
 
-        # -----------------------------------------
         # 8. Generate reasoning
-        # -----------------------------------------
-
         reasoning = self.reasoner.generate_reasoning(
             candidate,
             overall_score,
@@ -161,15 +130,27 @@ class ResumeScreeningAgent:
     def screen_candidates(
         self,
         resume_folder,
-        job_description,
-        required_skills,
-        minimum_months=6
+        job_description
     ):
         """
-        Process every supported resume in a folder
-        and return ranked candidates.
+        Analyze the job description and screen
+        all supported resumes in the folder.
         """
 
+        # 1. Analyze the job description
+        requirements = self.jd_analyzer.analyze(
+            job_description
+        )
+
+        required_skills = requirements[
+            "required_skills"
+        ]
+
+        minimum_months = requirements[
+            "minimum_experience_months"
+        ]
+
+        # 2. Find resumes
         resume_folder = Path(resume_folder)
 
         candidates = []
@@ -180,6 +161,7 @@ class ResumeScreeningAgent:
             ".txt"
         }
 
+        # 3. Process each resume
         for resume_path in resume_folder.iterdir():
 
             if (
@@ -193,7 +175,6 @@ class ResumeScreeningAgent:
             )
 
             try:
-
                 result = self.process_resume(
                     resume_path,
                     job_description,
@@ -204,16 +185,19 @@ class ResumeScreeningAgent:
                 candidates.append(result)
 
             except Exception as error:
-
                 print(
                     f"Error processing "
                     f"{resume_path.name}: {error}"
                 )
 
+        # 4. Rank candidates
         ranked_candidates = (
             self.ranker.rank_candidates(
                 candidates
             )
         )
 
-        return ranked_candidates
+        return {
+            "requirements": requirements,
+            "candidates": ranked_candidates
+        }
