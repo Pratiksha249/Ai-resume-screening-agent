@@ -1,0 +1,21 @@
+Name: Priya Nair
+
+Education:
+MSc Artificial Intelligence and Machine Learning
+
+Skills:
+Python, Machine Learning, Deep Learning, NLP,
+Transformers, Generative AI, PyTorch, TensorFlow,
+RAG, Git
+
+Experience:
+AI Research Intern - 1 year
+
+Projects:
+- Developed transformer-based NLP systems.
+- Built a RAG question answering application.
+- Worked on generative AI applications.
+- Compared deep learning models.
+
+Research:
+Conducted research on transformer-based NLP models.

@@ -1,0 +1,18 @@
+Name: Arjun Kumar
+
+Education:
+BSc Computer Science
+
+Skills:
+Java, HTML, CSS, JavaScript, SQL
+
+Experience:
+Web Developer - 1 year
+
+Projects:
+- Developed responsive websites.
+- Built web applications using JavaScript.
+- Worked with relational databases.
+
+Research:
+No AI research experience.

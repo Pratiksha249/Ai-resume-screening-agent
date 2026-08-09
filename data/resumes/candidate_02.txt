@@ -1,0 +1,18 @@
+Name: Rahul Mehta
+
+Education:
+MSc Computer Science
+
+Skills:
+Python, SQL, Java, Machine Learning, Git
+
+Experience:
+Software Developer - 2 years
+
+Projects:
+- Developed backend applications using Python.
+- Built SQL-based data processing systems.
+- Worked on machine learning experiments.
+
+Research:
+No formal AI research experience.
