@@ -1,0 +1,20 @@
+Name: Ananya Sharma
+
+Education:
+MSc Artificial Intelligence and Machine Learning
+
+Skills:
+Python, Machine Learning, Deep Learning, NLP,
+Transformers, PyTorch, Pandas, Scikit-learn,
+Git, Generative AI
+
+Experience:
+AI Research Intern - 8 months
+
+Projects:
+- Developed an NLP text classification system using BERT.
+- Built a RAG-based question answering system.
+- Compared transformer-based NLP models.
+
+Research:
+Worked on comparative evaluation of NLP models.
