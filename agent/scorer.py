@@ -12,6 +12,7 @@ class CandidateScorer:
     - Education
 
     Default weights:
+
         Semantic     = 40%
         Skills       = 30%
         Experience   = 20%
@@ -41,7 +42,7 @@ class CandidateScorer:
         required_skills
     ):
         """
-        Calculate the percentage of required skills
+        Calculate percentage of required skills
         present in the candidate profile.
         """
 
@@ -71,30 +72,26 @@ class CandidateScorer:
         return round(score * 100, 2)
 
     # =========================================================
-    # EXPERIENCE SCORE
+    # EXPERIENCE DURATION
     # =========================================================
 
-    def calculate_experience_score(
+    def calculate_experience_duration(
         self,
-        experience_text,
-        minimum_months
+        experience_text
     ):
         """
-        Calculate experience score using both:
+        Calculate total experience in months.
 
-        1. Explicit durations:
-           - 8 months
-           - 2 years
+        Supports:
 
-        2. Date ranges:
-           - Feb 2026 - May 2026
-           - Apr 2024 – Jun 2024
-           - January 2023 - March 2024
-
-        The final score is capped at 100.
+        - 8 months
+        - 2 years
+        - Feb 2026 - May 2026
+        - Apr 2024 – Jun 2024
         """
 
         if not experience_text:
+
             return 0.0
 
         text = experience_text.lower()
@@ -102,7 +99,7 @@ class CandidateScorer:
         total_months = 0.0
 
         # -----------------------------------------------------
-        # 1. Explicit month durations
+        # Explicit months
         # -----------------------------------------------------
 
         month_matches = re.findall(
@@ -116,7 +113,7 @@ class CandidateScorer:
             total_months += float(months)
 
         # -----------------------------------------------------
-        # 2. Explicit year durations
+        # Explicit years
         # -----------------------------------------------------
 
         year_matches = re.findall(
@@ -132,13 +129,7 @@ class CandidateScorer:
             )
 
         # -----------------------------------------------------
-        # 3. Date ranges
-        #
-        # Examples:
-        #
-        # Feb 2026 - May 2026
-        # Apr 2024 – Jun 2024
-        # January 2023 - March 2024
+        # Date ranges
         # -----------------------------------------------------
 
         month_names = (
@@ -194,35 +185,192 @@ class CandidateScorer:
 
                 continue
 
-        # -----------------------------------------------------
-        # 4. No experience detected
-        # -----------------------------------------------------
+        return total_months
 
-        if total_months <= 0:
+    # =========================================================
+    # EXPERIENCE RELEVANCE
+    # =========================================================
+
+    def calculate_experience_relevance(
+        self,
+        experience_text,
+        required_skills
+    ):
+        """
+        Estimate how relevant the candidate's experience
+        is to the job requirements.
+
+        This uses keyword evidence from the candidate's
+        experience section and the skills required by the JD.
+        """
+
+        if not experience_text:
+
+            return 0.0
+
+        if not required_skills:
+
+            return 100.0
+
+        text = experience_text.lower()
+
+        matched = 0
+
+        total = len(required_skills)
+
+        for skill in required_skills:
+
+            skill_lower = skill.lower()
+
+            # Direct skill mention
+            if skill_lower in text:
+
+                matched += 1
+
+                continue
+
+            # Useful aliases
+            aliases = {
+
+                "natural language processing": [
+                    "nlp",
+                    "natural language"
+                ],
+
+                "artificial intelligence": [
+                    "ai",
+                    "artificial intelligence",
+                    "genai",
+                    "generative ai"
+                ],
+
+                "machine learning": [
+                    "machine learning",
+                    "ml"
+                ],
+
+                "deep learning": [
+                    "deep learning",
+                    "neural network",
+                    "cnn"
+                ],
+
+                "generative ai": [
+                    "generative ai",
+                    "genai",
+                    "llm",
+                    "large language model"
+                ],
+
+                "nlp": [
+                    "nlp",
+                    "natural language processing"
+                ],
+
+                "python": [
+                    "python"
+                ]
+            }
+
+            found = False
+
+            for alias in aliases.get(
+                skill_lower,
+                []
+            ):
+
+                if alias in text:
+
+                    found = True
+                    break
+
+            if found:
+
+                matched += 1
+
+        return round(
+            (matched / total) * 100,
+            2
+        )
+
+    # =========================================================
+    # EXPERIENCE SCORE
+    # =========================================================
+
+    def calculate_experience_score(
+        self,
+        experience_text,
+        minimum_months,
+        required_skills=None
+    ):
+        """
+        Calculate experience score using:
+
+        70% experience duration
+        30% experience relevance
+        """
+
+        if not experience_text:
 
             return 0.0
 
         # -----------------------------------------------------
-        # 5. No minimum experience requirement
+        # Duration score
         # -----------------------------------------------------
+
+        total_months = (
+            self.calculate_experience_duration(
+                experience_text
+            )
+        )
 
         if minimum_months <= 0:
 
-            return 100.0
+            duration_score = 100.0
+
+        else:
+
+            duration_score = (
+                total_months
+                / minimum_months
+            ) * 100
+
+            duration_score = min(
+                duration_score,
+                100.0
+            )
 
         # -----------------------------------------------------
-        # 6. Compare candidate experience with requirement
+        # Relevance score
         # -----------------------------------------------------
 
-        score = (
-            total_months
-            / minimum_months
+        if required_skills:
+
+            relevance_score = (
+                self.calculate_experience_relevance(
+                    experience_text,
+                    required_skills
+                )
+            )
+
+        else:
+
+            relevance_score = 100.0
+
+        # -----------------------------------------------------
+        # Combined experience score
+        # -----------------------------------------------------
+
+        experience_score = (
+            duration_score * 0.70
+            +
+            relevance_score * 0.30
         )
 
-        # Cap score at 100
-        score = min(score, 1.0) * 100
-
-        return round(score, 2)
+        return round(
+            experience_score,
+            2
+        )
 
     # =========================================================
     # EDUCATION SCORE
@@ -234,14 +382,16 @@ class CandidateScorer:
         required_keywords
     ):
         """
-        Calculate education relevance based on
+        Calculate education relevance using
         keyword matching.
         """
 
         if not education_text:
+
             return 0.0
 
         if not required_keywords:
+
             return 100.0
 
         education_lower = (
@@ -261,7 +411,10 @@ class CandidateScorer:
             / len(required_keywords)
         ) * 100
 
-        return round(score, 2)
+        return round(
+            score,
+            2
+        )
 
     # =========================================================
     # OVERALL SCORE

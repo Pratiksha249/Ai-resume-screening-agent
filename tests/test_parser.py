@@ -1,12 +1,24 @@
 from agent.parser import extract_resume_text
 
 
-file_path = "data/resumes/candidate_01.txt"
+def test_resume_text_extraction():
 
-text = extract_resume_text(file_path)
+    resume_path = "data/resumes/test_resume.pdf"
 
-print("=" * 60)
-print("EXTRACTED RESUME")
-print("=" * 60)
+    text = extract_resume_text(
+        resume_path
+    )
 
-print(text)
+    assert text
+    assert len(text) > 100
+
+
+def test_resume_contains_candidate_name():
+
+    resume_path = "data/resumes/test_resume.pdf"
+
+    text = extract_resume_text(
+        resume_path
+    )
+
+    assert "PRATIKSHA" in text.upper()

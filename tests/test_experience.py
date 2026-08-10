@@ -1,44 +1,47 @@
-from agent.parser import extract_resume_text
-from agent.extractor import extract_resume_information
 from agent.scorer import CandidateScorer
 
 
-files = [
-    "data/resumes/candidate_01.txt",
-    "data/resumes/candidate_02.txt",
-    "data/resumes/candidate_03.txt",
-    "data/resumes/candidate_04.txt",
-]
+def test_experience_duration_months():
 
+    scorer = CandidateScorer()
 
-scorer = CandidateScorer()
+    experience = "AI Research Intern - 8 months"
 
-minimum_months = 6
-
-
-for file_path in files:
-
-    print("\n" + "=" * 70)
-    print(file_path)
-    print("=" * 70)
-
-    # Extract raw text
-    text = extract_resume_text(file_path)
-
-    # Extract structured information
-    candidate = extract_resume_information(text)
-
-    print("\nCandidate:")
-    print(candidate["name"])
-
-    print("\nExperience extracted:")
-    print(candidate["experience"])
-
-    # Calculate experience score
-    score = scorer.calculate_experience_score(
-        candidate["experience"],
-        minimum_months
+    months = scorer.calculate_experience_duration(
+        experience
     )
 
-    print("\nExperience score:")
-    print(score)
+    assert months == 8
+
+
+def test_experience_duration_years():
+
+    scorer = CandidateScorer()
+
+    experience = "Software Developer - 2 years"
+
+    months = scorer.calculate_experience_duration(
+        experience
+    )
+
+    assert months == 24
+
+
+def test_experience_score_meets_requirement():
+
+    scorer = CandidateScorer()
+
+    experience = "AI Research Intern - 8 months"
+
+    score = scorer.calculate_experience_score(
+        experience,
+        6,
+        [
+            "Python",
+            "Machine Learning",
+            "Artificial Intelligence"
+        ]
+    )
+
+    assert score > 0
+    assert score <= 100
