@@ -2,81 +2,133 @@ import re
 
 
 # ============================================================
-# Helper functions
+# Helper Functions
 # ============================================================
 
 def clean_text(text):
     """
-    Clean extracted PDF text while preserving useful
-    line and section information.
+    Clean extracted resume text while preserving
+    section and line information.
     """
 
     text = text.replace("\r", "\n")
 
-    # Remove excessive spaces
+    # Normalize excessive spaces
     text = re.sub(r"[ \t]+", " ", text)
 
-    # Remove excessive blank lines
+    # Normalize excessive blank lines
     text = re.sub(r"\n\s*\n+", "\n\n", text)
 
     return text.strip()
 
 
-def get_section(text, start_heading, end_headings):
+def get_section(text, start_headings, end_headings):
     """
-    Extract text between one section heading and
-    the next known section heading.
+    Extract text between a starting section heading
+    and the next known section heading.
+
+    Supports headings such as:
+
+        Experience:
+        EXPERIENCE
+        WORK EXPERIENCE
+        Education:
+        EDUCATION
     """
 
-    pattern = re.escape(start_heading)
+    # Allow a single string OR a list of headings
+    if isinstance(start_headings, str):
 
-    match = re.search(
-        pattern,
-        text,
-        flags=re.IGNORECASE
-    )
+        start_headings = [start_headings]
 
-    if not match:
+    if isinstance(end_headings, str):
+
+        end_headings = [end_headings]
+
+    # --------------------------------------------------------
+    # Find the first matching start heading
+    # --------------------------------------------------------
+
+    start_match = None
+
+    for heading in start_headings:
+
+        match = re.search(
+            rf"(?im)^\s*{re.escape(heading)}\s*:?\s*$",
+            text
+        )
+
+        if match:
+
+            if (
+                start_match is None
+                or match.start() < start_match.start()
+            ):
+
+                start_match = match
+
+    if start_match is None:
+
         return ""
 
-    start = match.end()
+    # Text after the heading
+    start_position = start_match.end()
 
-    remaining_text = text[start:]
+    remaining_text = text[start_position:]
+
+    # --------------------------------------------------------
+    # Find the next section
+    # --------------------------------------------------------
 
     end_positions = []
 
     for heading in end_headings:
 
-        heading_match = re.search(
-            re.escape(heading),
-            remaining_text,
-            flags=re.IGNORECASE
+        match = re.search(
+            rf"(?im)^\s*{re.escape(heading)}\s*:?\s*$",
+            remaining_text
         )
 
-        if heading_match:
+        if match:
+
             end_positions.append(
-                heading_match.start()
+                match.start()
             )
+
+    # --------------------------------------------------------
+    # Extract section
+    # --------------------------------------------------------
 
     if end_positions:
 
-        end = min(end_positions)
+        end_position = min(end_positions)
 
-        return remaining_text[:end].strip()
+        section = remaining_text[
+            :end_position
+        ]
 
-    return remaining_text.strip()
+    else:
+
+        section = remaining_text
+
+    return section.strip()
 
 
 # ============================================================
-# Name extraction
+# Name Extraction
 # ============================================================
 
 def extract_name(text):
     """
     Extract candidate name.
 
-    Assumes the first meaningful line of the resume
-    is the candidate's name.
+    Supports:
+
+    Name: Priya Nair
+
+    and:
+
+    PRATIKSHA P NAIK
     """
 
     lines = [
@@ -86,12 +138,35 @@ def extract_name(text):
     ]
 
     if not lines:
+
         return "Unknown"
 
-    # Usually the first line of a resume is the name.
+    # --------------------------------------------------------
+    # Case 1: Explicit Name field
+    # --------------------------------------------------------
+
+    for line in lines[:5]:
+
+        match = re.match(
+            r"^name\s*:\s*(.+)$",
+            line,
+            flags=re.IGNORECASE
+        )
+
+        if match:
+
+            name = match.group(1).strip()
+
+            if name:
+
+                return name
+
+    # --------------------------------------------------------
+    # Case 2: First meaningful line
+    # --------------------------------------------------------
+
     first_line = lines[0]
 
-    # Avoid treating common headings as names
     invalid_names = {
         "resume",
         "curriculum vitae",
@@ -101,54 +176,63 @@ def extract_name(text):
     }
 
     if first_line.lower() in invalid_names:
+
         return "Unknown"
 
     return first_line
 
 
 # ============================================================
-# Skills extraction
+# Skills Extraction
 # ============================================================
 
 def extract_skills(text):
     """
-    Extract skills that are actually present in the resume.
-
-    This avoids adding every skill from a predefined list.
+    Extract skills that actually occur in the resume.
     """
 
     skills = []
 
-    # Skills that we recognize.
-    # We only add them if they actually occur in the resume.
     skill_patterns = {
 
-        "Python": r"\bpython\b",
+        "Python":
+            r"\bpython\b",
 
-        "Java": r"\bjava\b",
+        "Java":
+            r"\bjava\b",
 
-        "JavaScript": r"\bjavascript\b",
+        "JavaScript":
+            r"\bjavascript\b",
 
-        "SQL": r"\bsql\b",
+        "SQL":
+            r"\bsql\b",
 
-        "Machine Learning": r"\bmachine learning\b|\bml\b",
+        "Machine Learning":
+            r"\bmachine learning\b|\bml\b",
 
-        "Deep Learning": r"\bdeep learning\b",
+        "Deep Learning":
+            r"\bdeep learning\b",
 
         "Artificial Intelligence":
-            r"\bartificial intelligence\b|\bai-focused\b|\bai/ml\b",
+            r"\bartificial intelligence\b"
+            r"|\bai-focused\b"
+            r"|\bai/ml\b",
 
         "Generative AI":
-            r"\bgenerative ai\b|\bgenai\b",
+            r"\bgenerative ai\b"
+            r"|\bgenai\b",
 
         "NLP":
-            r"\bnatural language processing\b|\bnlp\b",
+            r"\bnatural language processing\b"
+            r"|\bnlp\b",
 
         "LLM":
-            r"\bllms?\b|\blarge language models?\b",
+            r"\bllms?\b"
+            r"|\blarge language models?\b",
 
         "Transformers":
-            r"\btransformers\b|\bhuggingface transformers\b",
+            r"\btransformers\b"
+            r"|\bhuggingface transformers\b",
 
         "PyTorch":
             r"\bpytorch\b",
@@ -157,7 +241,8 @@ def extract_skills(text):
             r"\btensorflow\b",
 
         "Scikit-learn":
-            r"\bscikit-learn\b|\bsklearn\b",
+            r"\bscikit-learn\b"
+            r"|\bsklearn\b",
 
         "Pandas":
             r"\bpandas\b",
@@ -175,7 +260,8 @@ def extract_skills(text):
             r"\bstreamlit\b",
 
         "REST API":
-            r"\brest api\b|\brest apis\b",
+            r"\brest api\b"
+            r"|\brest apis\b",
 
         "MySQL":
             r"\bmysql\b",
@@ -190,7 +276,8 @@ def extract_skills(text):
             r"\bazure\b",
 
         "GCP":
-            r"\bgcp\b|\bgoogle cloud platform\b",
+            r"\bgcp\b"
+            r"|\bgoogle cloud platform\b",
 
         "Git":
             r"\bgit\b",
@@ -203,12 +290,6 @@ def extract_skills(text):
 
         "Power BI":
             r"\bpower bi\b",
-
-        "OpenCV":
-            r"\bopencv\b",
-
-        "TensorFlow":
-            r"\btensorflow\b",
 
         "CNN":
             r"\bcnns?\b",
@@ -238,12 +319,8 @@ def extract_skills(text):
             r"\bnltk\b",
 
         "spaCy":
-            r"\bspacy\b",
-
-        "REST APIs":
-            r"\brest api\b|\brest apis\b"
+            r"\bspacy\b"
     }
-
 
     for skill, pattern in skill_patterns.items():
 
@@ -257,65 +334,97 @@ def extract_skills(text):
 
                 skills.append(skill)
 
-
     return skills
 
 
 # ============================================================
-# Education extraction
+# Education Extraction
 # ============================================================
 
 def extract_education(text):
     """
     Extract education section.
+
+    Supports:
+
+        EDUCATION
+
+    and:
+
+        Education:
     """
 
     section = get_section(
         text,
-        "EDUCATION",
+
+        [
+            "EDUCATION",
+            "Education"
+        ],
+
         [
             "PUBLICATION",
+            "Publication",
             "ACHIEVEMENTS",
+            "Achievements",
             "ACHIEVEMENTS & LEADERSHIP",
-            "LEADERSHIP"
+            "Achievements & Leadership",
+            "LEADERSHIP",
+            "Leadership"
         ]
     )
-
-    if not section:
-        return ""
 
     return section.strip()
 
 
 # ============================================================
-# Experience extraction
+# Experience Extraction
 # ============================================================
 
 def extract_experience(text):
     """
     Extract work experience section.
+
+    Supports:
+
+        WORK EXPERIENCE
+
+    and:
+
+        Experience:
     """
 
     section = get_section(
         text,
-        "WORK EXPERIENCE",
+
+        [
+            "WORK EXPERIENCE",
+            "Work Experience",
+            "EXPERIENCE",
+            "Experience"
+        ],
+
         [
             "PROJECTS",
+            "Projects",
             "EDUCATION",
+            "Education",
             "PUBLICATION",
+            "Publication",
             "ACHIEVEMENTS",
-            "ACHIEVEMENTS & LEADERSHIP"
+            "Achievements",
+            "ACHIEVEMENTS & LEADERSHIP",
+            "Achievements & Leadership",
+            "LEADERSHIP",
+            "Leadership"
         ]
     )
-
-    if not section:
-        return ""
 
     return section.strip()
 
 
 # ============================================================
-# Projects extraction
+# Projects Extraction
 # ============================================================
 
 def extract_projects(text):
@@ -325,16 +434,28 @@ def extract_projects(text):
 
     section = get_section(
         text,
-        "PROJECTS",
+
+        [
+            "PROJECTS",
+            "Projects"
+        ],
+
         [
             "EDUCATION",
+            "Education",
             "PUBLICATION",
+            "Publication",
             "ACHIEVEMENTS",
-            "ACHIEVEMENTS & LEADERSHIP"
+            "Achievements",
+            "ACHIEVEMENTS & LEADERSHIP",
+            "Achievements & Leadership",
+            "LEADERSHIP",
+            "Leadership"
         ]
     )
 
     if not section:
+
         return []
 
     projects = []
@@ -349,13 +470,11 @@ def extract_projects(text):
 
     for line in lines:
 
-        # Ignore standalone "Tech:" lines by attaching
-        # them to the previous project.
         if line.lower().startswith("tech:"):
 
             current_project += " " + line
 
-        else:
+        elif line.startswith("-"):
 
             if current_project:
 
@@ -363,7 +482,17 @@ def extract_projects(text):
                     current_project.strip()
                 )
 
-            current_project = line
+            current_project = line.lstrip("-").strip()
+
+        else:
+
+            if current_project:
+
+                current_project += " " + line
+
+            else:
+
+                current_project = line
 
     if current_project:
 
@@ -375,36 +504,66 @@ def extract_projects(text):
 
 
 # ============================================================
-# Research / Publication extraction
+# Research Extraction
 # ============================================================
 
 def extract_research(text):
     """
-    Extract publication/research information.
+    Extract research/publication information.
     """
 
+    # First try PUBLICATION
     section = get_section(
         text,
-        "PUBLICATION",
+
+        [
+            "PUBLICATION",
+            "Publication"
+        ],
+
         [
             "ACHIEVEMENTS",
+            "Achievements",
             "ACHIEVEMENTS & LEADERSHIP",
-            "LEADERSHIP"
+            "Achievements & Leadership",
+            "LEADERSHIP",
+            "Leadership"
         ]
     )
+
+    # If publication doesn't exist,
+    # try Research
+    if not section:
+
+        section = get_section(
+            text,
+
+            [
+                "RESEARCH",
+                "Research"
+            ],
+
+            [
+                "EDUCATION",
+                "Education",
+                "PROJECTS",
+                "Projects",
+                "ACHIEVEMENTS",
+                "Achievements"
+            ]
+        )
 
     return section.strip()
 
 
 # ============================================================
-# Main extraction function
+# Main Extraction Function
 # ============================================================
 
 def extract_resume_information(text):
     """
-    Main resume information extraction function.
-
-    Returns structured candidate information.
+    Extract structured candidate information
+    from resume text.
     """
 
     text = clean_text(text)
